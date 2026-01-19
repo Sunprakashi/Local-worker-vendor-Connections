@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>All Bookings</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <h2>All Bookings</h2>
+  <table id="bookingsTable">
+    <thead>
+      <tr>
+        <th>Customer</th>
+        <th>Phone</th>
+        <th>Helper Name</th>
+        <th>Work Type</th>
+        <th>Booking Day</th>
+        <th>Preferred Time</th>
+        <th>Booked At</th>
+        <th>Payment Type</th> <!-- 👈 Added -->
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3Pozh1DiDghqzpx2yTAYoXkLNHuWMHps",
+      authDomain: "jobposter-11ecd.firebaseapp.com",
+      projectId: "jobposter-11ecd",
+      storageBucket: "jobposter-11ecd.appspot.com",
+      messagingSenderId: "1054867723446",
+      appId: "1:1054867723446:web:d1902de9aeb7b146fc4217",
+      measurementId: "G-LK3WR7EKYB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const bookingsTable = document.querySelector('#bookingsTable tbody');
+
+    db.collection("bookings").orderBy("timestamp", "desc").get().then(snapshot => {
+      snapshot.forEach(doc => {
+        const booking = doc.data();
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${booking.bookedBy || 'N/A'}</td>
+          <td>${booking.customerPhone || 'N/A'}</td>
+          <td>${booking.helperName || 'N/A'}</td>
+          <td>${booking.workType || 'N/A'}</td>
+          <td>${booking.preferredDay || 'N/A'}</td>
+          <td>${booking.preferredTime || 'N/A'}</td>
+          <td>${booking.timestamp?.toDate().toLocaleString() || 'N/A'}</td>
+          <td>${booking.paymentMethod || 'N/A'}</td> <!-- 👈 Added -->
+        `;
+
+        bookingsTable.appendChild(row);
+      });
+    }).catch(error => {
+      console.error("Error loading bookings:", error);
+    });
+  </script>
+</body>
+</html>

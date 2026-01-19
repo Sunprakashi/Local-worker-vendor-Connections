@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Helper Dashboard</title>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #fafafc, #5f6565, #edefef);
+      color: #0a0202;
+    }
+
+    .dashboard {
+      padding: 40px;
+      text-align: center;
+    }
+
+    .jobs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .job-card {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .job-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .apply-btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      margin: 5px;
+    }
+
+    .apply-btn:hover {
+      background-color: #0056b3;
+    }
+
+    .live-location {
+      background-color: green;
+    }
+
+    #bookingModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    #bookingModalContent {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+    }
+
+    #bookingModalContent input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+  <div class="dashboard">
+    <h2>Available Helpers</h2>
+    <p>Explore trusted helpers around you</p>
+    <input type="text" id="searchInput" placeholder="Search for work type (e.g. plumber)" style="padding: 10px; width: 60%; border-radius: 5px; margin-bottom: 20px;">
+    <div class="jobs" id="helperListings"></div>
+  </div>
+
+  <div id="bookingModal">
+    <div id="bookingModalContent">
+      <h3>Book Helper</h3>
+      <input type="text" id="customerName" placeholder="Your Name" />
+      <input type="text" id="customerPhone" placeholder="Phone Number" />
+      <input type="text" id="preferredDay" placeholder="Booking Day (e.g. Monday)" />
+      <input type="text" id="preferredTime" placeholder="Preferred Time (e.g. 5PM today)" />
+      <button onclick="submitBooking()" class="apply-btn">Submit Booking</button>
+      <button onclick="closeModal()" class="apply-btn">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3Pozh1DiDghqzpx2yTAYoXkLNHuWMHps",
+      authDomain: "jobposter-11ecd.firebaseapp.com",
+      projectId: "jobposter-11ecd",
+      storageBucket: "jobposter-11ecd.appspot.com",
+      messagingSenderId: "1054867723446",
+      appId: "1:1054867723446:web:d1902de9aeb7b146fc4217",
+      measurementId: "G-LK3WR7EKYB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const helperListings = document.getElementById('helperListings');
+    let allHelpers = [];
+    let selectedHelper = null;
+
+    function fetchHelpers() {
+      db.collection("helpers").get().then(snapshot => {
+        const helpers = snapshot.docs.map(doc => doc.data());
+        allHelpers = helpers;
+
+        db.collection("bookings").orderBy("timestamp", "desc").get().then(bookingSnap => {
+          const bookings = bookingSnap.docs.map(doc => doc.data());
+          const latestBookings = {};
+          bookings.forEach(b => {
+            if (!latestBookings[b.helperId]) {
+              latestBookings[b.helperId] = b;
+            }
+          });
+
+          displayHelpers(helpers, latestBookings);
+        });
+      }).catch(error => {
+        console.error("Error fetching helpers:", error);
+        helperListings.innerHTML = '<p>Error loading helpers.</p>';
+      });
+    }
+
+    function displayHelpers(helperList, bookingMap = {}) {
+      helperListings.innerHTML = '';
+      if (helperList.length === 0) {
+        helperListings.innerHTML = '<p>No helpers found at the moment.</p>';
+        return;
+      }
+
+      helperList.forEach(helper => {
+        const helperCard = document.createElement('div');
+        helperCard.classList.add('job-card');
+
+        const booking = bookingMap[helper.contact];
+        const bookingInfo = booking
+          ? `<p style="color: green;"><strong>\uD83D\uDCC5 Booked On:</strong> ${booking.preferredDay}, ${booking.preferredTime}</p>`
+          : '';
+
+        helperCard.innerHTML = `
+          <h4>${helper.name || 'Unnamed'}</h4>
+          <p><strong>Contact:</strong> ${helper.contact || 'N/A'}</p>
+          <p><strong>Email:</strong> ${helper.email || 'N/A'}</p>
+          <p><strong>Work Type:</strong> ${helper.workType || 'N/A'}</p>
+          <p><strong>Experience:</strong> ${helper.experience || '0'} years</p>
+          <p><strong>Location:</strong> ${helper.location || 'Not provided'}</p>
+
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            ${helper.location ? `
+              <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(helper.location)}" target="_blank">
+                <button class="apply-btn live-location">Location</button>
+              </a>` : ''}
+
+            <button class="apply-btn" onclick='bookHelper(${JSON.stringify(helper)})'>Book Now</button>
+          </div>
+          ${bookingInfo}
+        `;
+
+        helperListings.appendChild(helperCard);
+      });
+    }
+
+    function bookHelper(helper) {
+      selectedHelper = helper;
+      document.getElementById("bookingModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("bookingModal").style.display = "none";
+      document.getElementById("customerName").value = '';
+      document.getElementById("customerPhone").value = '';
+      document.getElementById("preferredTime").value = '';
+      document.getElementById("preferredDay").value = '';
+    }
+
+    function submitBooking() {
+      const name = document.getElementById("customerName").value.trim();
+      const phone = document.getElementById("customerPhone").value.trim();
+      const time = document.getElementById("preferredTime").value.trim();
+      const day = document.getElementById("preferredDay").value.trim();
+
+      if (!name || !phone || !time || !day) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      db.collection("bookings").add({
+        helperId: selectedHelper.contact,
+        helperName: selectedHelper.name,
+        helperEmail: selectedHelper.email,
+        workType: selectedHelper.workType,
+        bookedBy: name,
+        customerPhone: phone,
+        preferredTime: time,
+        preferredDay: day,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        alert("Helper booked successfully!");
+        closeModal();
+        fetchHelpers();
+      }).catch(error => {
+        console.error("Booking failed:", error);
+        alert("Failed to book. Try again later.");
+      });
+    }
+
+    document.getElementById("searchInput").addEventListener("input", function (e) {
+      const query = e.target.value.toLowerCase();
+      const filteredHelpers = allHelpers.filter(helper =>
+        helper.workType && helper.workType.toLowerCase().includes(query)
+      );
+      displayHelpers(filteredHelpers);
+    });
+
+    fetchHelpers();
+  </script>
+</body>
+</html>

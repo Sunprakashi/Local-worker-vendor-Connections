@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Seeker Dashboard</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #adb0b0;
+            background: linear-gradient(135deg, #fafafc, #5f6565, #edefef);
+            color: #0a0202;
+            line-height: 1.6;
+        }
+        
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            background-color: #c1c1c1;
+            background: linear-gradient(135deg, #fafafc, #5f6565, #edefef);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .menu-toggle {
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 20px;
+            width: 25px;
+        }
+        
+        .bar {
+            height: 3px;
+            width: 100%;
+            background-color: #191a1c;
+            border-radius: 2px;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -250px;
+            height: 100%;
+            width: 250px;
+            background-color: #57565789;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+            padding-top: 60px;
+            transition: left 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar a {
+            padding: 15px 25px;
+            text-decoration: none;
+            font-size: 1.1em;
+            color: #191a1c;
+            transition: background 0.2s;
+        }
+        
+        .sidebar a:hover {
+            background-color: #ddd;
+        }
+        
+        .logo {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #191a1c;
+        }
+        
+        .dashboard {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .jobs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .job-card {
+            background-color: #c0c0c0;
+            background: linear-gradient(135deg, #c1c1c3, #9a9b9b, #ced0d0);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(247, 245, 245, 0.938);
+        }
+        
+        .apply-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .apply-btn:hover {
+            background-color: #aae1b9;
+        }
+        
+        .search-bar {
+            padding: 10px;
+            width: 80%;
+            max-width: 500px;
+            margin: 20px auto;
+            display: block;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+
+    <div class="navbar">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div class="menu-toggle" onclick="toggleMenu()">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+            <div class="logo">Job Seeker</div>
+        </div>
+    </div>
+
+    <div id="sidebar" class="sidebar">
+        <a href="helperdash.html">Helper</a>
+
+        <a href="booking.html">booking</a>
+        <a href="helper attandance.html">helper attandance</a>
+        <a href="#" onclick="toggleMenu()">Close</a>
+    </div>
+
+    <div class="dashboard">
+        <h2>Welcome To Your Job Dashboard</h2>
+        <p>Your dream job awaits – start exploring today!</p>
+
+        <!-- 🔍 Search Input -->
+        <input type="text" id="jobSearch" class="search-bar" placeholder="Search by job title, company, or location..." />
+
+        <!-- 🔲 Job Listings -->
+        <div class="jobs" id="jobListings"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Pozh1DiDghqzpx2yTAYoXkLNHuWMHps",
+            authDomain: "jobposter-11ecd.firebaseapp.com",
+            projectId: "jobposter-11ecd",
+            storageBucket: "jobposter-11ecd.appspot.com",
+            messagingSenderId: "1054867723446",
+            appId: "1:1054867723446:web:d1902de9aeb7b146fc4217",
+            measurementId: "G-LK3WR7EKYB"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const jobListings = document.getElementById('jobListings');
+        const searchInput = document.getElementById('jobSearch');
+
+        let allJobs = [];
+
+        function toggleMenu() {
+            const sidebar = document.getElementById("sidebar");
+            sidebar.style.left = sidebar.style.left === "0px" ? "-250px" : "0px";
+        }
+
+        function displayJobs(jobsToDisplay) {
+            jobListings.innerHTML = '';
+            if (jobsToDisplay.length === 0) {
+                jobListings.innerHTML = '<p>No jobs found. Please check back later.</p>';
+                return;
+            }
+
+            jobsToDisplay.forEach(job => {
+                const jobCard = document.createElement('div');
+                jobCard.classList.add('job-card');
+                jobCard.innerHTML = `
+                    <h4>${job.jobTitle || 'No Title'}</h4>
+                    <p><strong>Company:</strong> ${job.companyName || 'Not specified'}</p>
+                    <p><strong>Location:</strong> ${job.location || 'Not specified'}</p>
+                    <p><strong>Type:</strong> ${job.jobType || 'Not specified'}</p>
+                    <p><strong>Salary:</strong> ${job.salary ? 'Rs.' + job.salary : 'Not disclosed'}</p>
+                    <a href="apply.html" target="_blank">
+                        <button class="apply-btn">Apply</button>
+                    </a>
+                `;
+                jobListings.appendChild(jobCard);
+            });
+        }
+
+        function fetchAndDisplayFirestoreJobs() {
+            db.collection("jobs").get().then((querySnapshot) => {
+                allJobs = [];
+                querySnapshot.forEach((doc) => {
+                    allJobs.push(doc.data());
+                });
+                displayJobs(allJobs);
+            }).catch((error) => {
+                console.error("Error fetching jobs: ", error);
+                jobListings.innerHTML = '<p>Error loading jobs. Please try again later.</p>';
+            });
+        }
+
+        function handleSearchInput() {
+            const query = searchInput.value.toLowerCase();
+            const filteredJobs = allJobs.filter(job =>
+                (job.jobTitle || '').toLowerCase().includes(query) ||
+                (job.companyName || '').toLowerCase().includes(query) ||
+                (job.location || '').toLowerCase().includes(query)
+            );
+            displayJobs(filteredJobs);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchAndDisplayFirestoreJobs();
+            searchInput.addEventListener("input", handleSearchInput);
+        });
+    </script>
+</body>
+
+</html>

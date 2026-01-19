@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Helper Attendance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    button {
+      padding: 6px 10px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <h2>Helper Attendance Records</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Contact</th>
+        <th>Work Type</th>
+        <th>Date</th>
+        <th>Check-in Time</th>
+        <th>Check-out Time</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="attendanceTable"></tbody>
+  </table>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3Pozh1DiDghqzpx2yTAYoXkLNHuWMHps",
+      authDomain: "jobposter-11ecd.firebaseapp.com",
+      projectId: "jobposter-11ecd",
+      storageBucket: "jobposter-11ecd.appspot.com",
+      messagingSenderId: "1054867723446",
+      appId: "1:1054867723446:web:d1902de9aeb7b146fc4217",
+      measurementId: "G-LK3WR7EKYB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const attendanceTable = document.getElementById("attendanceTable");
+
+    function loadAttendance() {
+      attendanceTable.innerHTML = ""; // clear previous rows
+
+      db.collection("attendance").orderBy("timestamp", "desc").get().then(snapshot => {
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const row = document.createElement("tr");
+
+          const checkInTime = data.timestamp?.toDate().toLocaleTimeString() || 'N/A';
+          const checkOutTime = data.checkout?.toDate().toLocaleTimeString() || '';
+
+          row.innerHTML = `
+            <td>${data.name || 'N/A'}</td>
+            <td>${data.contact || 'N/A'}</td>
+            <td>${data.workType || 'N/A'}</td>
+            <td>${data.date || 'N/A'}</td>
+            <td>${checkInTime}</td>
+            <td>${checkOutTime || '-'}</td>
+            <td>
+              ${checkOutTime ? '<span style="color: green;">Checked Out</span>' : 
+              `<button onclick="checkOut('${doc.id}')">Check-Out</button>`}
+            </td>
+          `;
+
+          attendanceTable.appendChild(row);
+        });
+      }).catch(error => {
+        console.error("Error loading attendance:", error);
+      });
+    }
+
+    function checkOut(docId) {
+      const now = new Date();
+      const hour = now.getHours();
+
+      if (hour < 17) { // only allow check-out after 5 PM
+        alert("Check-out is only allowed after 5:00 PM.");
+        return;
+      }
+
+      db.collection("attendance").doc(docId).update({
+        checkout: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        alert("Checked out successfully!");
+        loadAttendance(); // refresh table
+      }).catch(error => {
+        console.error("Error during check-out:", error);
+        alert("Check-out failed.");
+      });
+    }
+
+    // Initial load
+    loadAttendance();
+  </script>
+</body>
+</html>

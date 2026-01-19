@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Poster Login</title>
+    <link rel="stylesheet" href="login.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        .social-login {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .social-login button {
+            width: 150px;
+            padding: 10px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .social-login button i {
+            margin-right: 10px;
+        }
+        
+        .google-login-btn {
+            background-color: #4285F4;
+            color: white;
+        }
+        
+        .social-login button:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <section class="login-container">
+        <h2>Job Poster Login</h2>
+        <input type="email" id="email" placeholder="Enter Email" class="input-box">
+        <input type="password" id="password" placeholder="Enter Password" class="input-box">
+        <button onclick="login()">Login</button>
+        <p><a href="#" onclick="forgotPassword()">Forgot Password?</a></p>
+        <p>Don't have an account? <a href="signupjobposter.html">Sign Up</a></p>
+
+        <div class="social-login">
+            <button class="google-login-btn" onclick="googleLogin()"><i class="fab fa-google"></i> Login with Google</button>
+        </div>
+    </section>
+
+    <script>
+        // Initialize Firebase (Replace with your Firebase config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVOPMIWRJuIlNSaqSeOdlcIObEZCbE6K4",
+            authDomain: "loginposter-32e88.firebaseapp.com",
+            projectId: "loginposter-32e88",
+            storageBucket: "loginposter-32e88.firebasestorage.app",
+            messagingSenderId: "982152262032",
+            appId: "1:982152262032:web:e0c64cf75bdc0495cf8315",
+            measurementId: "G-N7SW76HL3P"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        document.getElementById('email').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                document.getElementById('password').focus();
+            }
+        });
+
+        document.getElementById('password').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                login();
+            }
+        });
+
+        function login() {
+            let email = document.getElementById('email').value;
+            let password = document.getElementById('password').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    // Check if the user is a job poster
+                    db.collection("jobposters").doc(user.uid).get()
+                        .then((doc) => {
+                            if (doc.exists) {
+                                // User is a job poster, redirect to dashboard
+                                window.location.href = 'jobposterdashboard.html';
+                            } else {
+                                // User is not a job poster, show error or redirect to a different page
+                                alert("You are not registered as a job poster.");
+                                auth.signOut(); // Sign out the user
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error getting document:", error);
+                            alert("Login failed. Please try again.");
+                            auth.signOut(); // Sign out the user
+                        });
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    alert("Login failed: " + errorMessage);
+                    console.error("Login error:", errorCode, errorMessage);
+                });
+        }
+
+        function googleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    // Check if the user is a job poster (you might need to adjust this logic)
+                    db.collection("jobposters").doc(user.uid).get()
+                        .then((doc) => {
+                            if (doc.exists) {
+                                window.location.href = 'jobposterdashboard.html';
+                            } else {
+                                // Handle the case where the Google user is not a job poster
+                                // You might want to create a new job poster document here or redirect them
+                                alert("You are not registered as a job poster.");
+                                auth.signOut();
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error checking job poster status:", error);
+                            alert("Login failed. Please try again.");
+                            auth.signOut();
+                        });
+                })
+                .catch((error) => {
+                    console.error("Google login error:", error);
+                    alert("Google login failed: " + error.message);
+                });
+        }
+
+        function forgotPassword() {
+            let email = document.getElementById('email').value;
+            if (email) {
+                auth.sendPasswordResetEmail(email)
+                    .then(() => {
+                        alert("Password reset email sent! Please check your inbox.");
+                    })
+                    .catch((error) => {
+                        console.error("Password reset error:", error);
+                        alert("Failed to send password reset email: " + error.message);
+                    });
+            } else {
+                alert("Please enter your email address.");
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Helper Dashboard</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #fafafc, #5f6565, #edefef);
+            color: #0a0202;
+        }
+        
+        .dashboard {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .jobs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .job-card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .apply-btn,
+        .feedback-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 5px;
+        }
+        
+        .apply-btn:hover,
+        .feedback-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .live-location {
+            background-color: green;
+        }
+        
+        #bookingModal,
+        #paymentModal,
+        #bookingDetailsModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modalContent {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+        
+        .modalContent input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        
+        #bookingDetailsList {
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        
+        #qrCodeImage {
+            width: 200px;
+            margin: 10px auto;
+            display: block;
+        }
+    </style>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+    <div class="dashboard">
+        <h2>Available Helpers</h2>
+        <p>Explore trusted helpers around you</p>
+        <input type="text" id="searchInput" placeholder="Search for work type (e.g. plumber)" style="padding: 10px; width: 60%; border-radius: 5px; margin-bottom: 20px;">
+        <div class="jobs" id="helperListings"></div>
+    </div>
+
+    <div id="bookingModal">
+        <div class="modalContent">
+            <h3>Book Helper</h3>
+            <input type="text" id="customerName" placeholder="Your Name" />
+            <input type="text" id="customerPhone" placeholder="Phone Number" />
+            <input type="text" id="preferredDay" placeholder="Booking Day (e.g. Monday)" />
+            <input type="text" id="preferredTime" placeholder="Preferred Time (e.g. 5PM today)" />
+            <button onclick="submitBooking()" class="apply-btn">Proceed to Payment</button>
+            <button onclick="closeModal()" class="apply-btn">Cancel</button>
+        </div>
+    </div>
+
+    <div id="paymentModal">
+        <div class="modalContent">
+            <h3>Payment</h3>
+            <p>Scan QR to pay or choose cash:</p>
+            <img id="qrCodeImage" src="https://api.qrserver.com/v1/create-qr-code/?data=upi://pay?pa=your-upi-id@bank&pn=HelperBooking&am=100&cu=INR" alt="QR Code Payment" />
+            <button onclick="completeBooking('online')" class="apply-btn">I Paid via QR</button>
+            <button onclick="completeBooking('cash')" class="apply-btn">Pay Cash</button>
+            <button onclick="closePaymentModal()" class="apply-btn">Cancel</button>
+        </div>
+    </div>
+
+    <div id="bookingDetailsModal">
+        <div class="modalContent">
+            <h3>Booking Details</h3>
+            <div id="bookingDetailsList">Loading...</div>
+            <button onclick="closeDetailsModal()" class="apply-btn">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Pozh1DiDghqzpx2yTAYoXkLNHuWMHps",
+            authDomain: "jobposter-11ecd.firebaseapp.com",
+            projectId: "jobposter-11ecd",
+            storageBucket: "jobposter-11ecd.appspot.com",
+            messagingSenderId: "1054867723446",
+            appId: "1:1054867723446:web:d1902de9aeb7b146fc4217",
+            measurementId: "G-LK3WR7EKYB"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const helperListings = document.getElementById('helperListings');
+        let allHelpers = [];
+        let selectedHelper = null;
+
+        function checkInHelper(helper) {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+
+            if (hour < 9 || hour >= 24) {
+                alert("Check-in is only allowed between 9:00 AM and 12:00 AM (midnight).");
+                return;
+            }
+
+            const today = new Date();
+            const dateStr = today.toISOString().split('T')[0]; //YYYY-MM-DD
+
+            db.collection("attendance")
+                .where("contact", "==", helper.contact)
+                .where("date", "==", dateStr)
+                .get()
+                .then(snapshot => {
+                    if (!snapshot.empty) {
+                        alert(`${helper.name} has already checked in today (${dateStr}).`);
+                    } else {
+                        db.collection("attendance").add({
+                            name: helper.name,
+                            contact: helper.contact,
+                            workType: helper.workType,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            date: dateStr
+                        }).then(() => {
+                            alert(`${helper.name} checked in successfully on ${dateStr}.`);
+                            fetchHelpers(); // 🔄 Refresh the helper list to hide the button
+                        }).catch(error => {
+                            console.error("Check-in failed:", error);
+                            alert("Check-in failed. Please try again.");
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Error checking attendance:", error);
+                    alert("Something went wrong. Try again later.");
+                });
+        }
+
+
+        function fetchHelpers() {
+            db.collection("helpers").get().then(snapshot => {
+                const helpers = snapshot.docs.map(doc => doc.data());
+                allHelpers = helpers;
+                displayHelpers(helpers);
+            }).catch(error => {
+                console.error("Error fetching helpers:", error);
+                helperListings.innerHTML = '<p>Error loading helpers.</p>';
+            });
+        }
+
+        function displayHelpers(helperList) {
+            helperListings.innerHTML = '';
+            if (helperList.length === 0) {
+                helperListings.innerHTML = '<p>No helpers found at the moment.</p>';
+                return;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+
+            helperList.forEach(async helper => {
+                        const helperCard = document.createElement('div');
+                        helperCard.classList.add('job-card');
+
+                        let alreadyCheckedIn = false;
+
+                        try {
+                            const snapshot = await db.collection("attendance")
+                                .where("contact", "==", helper.contact)
+                                .where("date", "==", today)
+                                .get();
+
+                            alreadyCheckedIn = !snapshot.empty;
+                        } catch (error) {
+                            console.error("Error checking attendance:", error);
+                        }
+
+                        const checkInButton = !alreadyCheckedIn ?
+                            `<button class="apply-btn" onclick='checkInHelper(${JSON.stringify(helper)})'>Check-In</button>` :
+                            '';
+
+                        helperCard.innerHTML = `
+                    <h4>${helper.name || 'Unnamed'}</h4>
+                    <p><strong>Contact:</strong> ${helper.contact || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${helper.email || 'N/A'}</p>
+                    <p><strong>Work Type:</strong> ${helper.workType || 'N/A'}</p>
+                    <p><strong>Experience:</strong> ${helper.experience || '0'} years</p>
+                    <p><strong>Location:</strong> ${helper.location || 'Not provided'}</p>
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        ${helper.location ? `
+                            <a href="http://maps.google.com/?q=${encodeURIComponent(helper.location)}" target="_blank">
+                                <button class="apply-btn live-location">Location</button>
+                            </a>` : ''}
+                        <button class="apply-btn" onclick='bookHelper(${JSON.stringify(helper)})'>Book Now</button>
+                        <button class="apply-btn" onclick='showBookingDetails("${helper.contact}")'>Booking Details</button>
+                        ${checkInButton}
+                        <button class="feedback-btn" onclick='openFeedbackPage("${helper.contact}", "${helper.name}")'>Feedback</button>
+                    </div>
+                `;
+
+                helperListings.appendChild(helperCard);
+            });
+        }
+        function bookHelper(helper) {
+            selectedHelper = helper;
+            document.getElementById("bookingModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("bookingModal").style.display = "none";
+            document.getElementById("customerName").value = '';
+            document.getElementById("customerPhone").value = '';
+            document.getElementById("preferredTime").value = '';
+            document.getElementById("preferredDay").value = '';
+        }
+
+        function submitBooking() {
+            const name = document.getElementById("customerName").value.trim();
+            const phone = document.getElementById("customerPhone").value.trim();
+            const time = document.getElementById("preferredTime").value.trim();
+            const day = document.getElementById("preferredDay").value.trim();
+
+            if (!name || !phone || !time || !day) {
+                alert("Please fill all fields.");
+                return;
+            }
+
+            db.collection("bookings")
+                .where("helperId", "==", selectedHelper.contact)
+                .where("preferredDay", "==", day)
+                .get()
+                .then(snapshot => {
+                    let conflict = false;
+                    let bookedTimes = [];
+
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.preferredTime === time) {
+                            conflict = true;
+                        }
+                        bookedTimes.push(data.preferredTime);
+                    });
+
+                    if (conflict) {
+                        alert(`This helper is already booked on ${day} at ${time}. Booked times on ${day}: ${bookedTimes.join(", ")}. Please choose a different time.`);
+                        return;
+                    }
+
+                    window.tempBookingData = {
+                        helperId: selectedHelper.contact,
+                        helperName: selectedHelper.name,
+                        helperEmail: selectedHelper.email,
+                        workType: selectedHelper.workType,
+                        bookedBy: name,
+                        customerPhone: phone,
+                        preferredTime: time,
+                        preferredDay: day,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+
+                    closeModal();
+                    document.getElementById("paymentModal").style.display = "flex";
+                })
+                .catch(error => {
+                    console.error("Error checking existing bookings:", error);
+                    alert("Error checking availability. Try again.");
+                });
+        }
+
+        function completeBooking(paymentMethod) {
+            const bookingData = window.tempBookingData;
+            bookingData.paymentMethod = paymentMethod;
+
+            db.collection("bookings").add(bookingData)
+                .then(() => {
+                    alert(`Booking successful! Payment: ${paymentMethod}`);
+                    closePaymentModal();
+                })
+                .catch(error => {
+                    console.error("Booking failed:", error);
+                    alert("Failed to book. Try again.");
+                });
+        }
+
+        function closePaymentModal() {
+            document.getElementById("paymentModal").style.display = "none";
+        }
+
+        function showBookingDetails(helperContact) {
+            document.getElementById("bookingDetailsModal").style.display = "flex";
+            const bookingList = document.getElementById("bookingDetailsList");
+            bookingList.innerHTML = "Loading...";
+
+            db.collection("bookings")
+                .where("helperId", "==", helperContact)
+                .orderBy("timestamp", "desc")
+                .get()
+                .then(snapshot => {
+                    if (snapshot.empty) {
+                        bookingList.innerHTML = "<p>No bookings yet.</p>";
+                        return;
+                    }
+
+                    bookingList.innerHTML = "";
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const item = document.createElement("p");
+                        item.textContent = `📅 ${data.preferredDay} - 🕒 ${data.preferredTime}`;
+                        bookingList.appendChild(item);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching booking details:", error);
+                    bookingList.innerHTML = "<p>Failed to fetch booking details.</p>";
+                });
+        }
+
+        function closeDetailsModal() {
+            document.getElementById("bookingDetailsModal").style.display = "none";
+        }
+
+        function openFeedbackPage(helperId, helperName) {
+            window.location.href = `feedback.html?helperId=${helperId}&helperName=${encodeURIComponent(helperName)}`;
+        }
+
+        document.getElementById("searchInput").addEventListener("input", function (e) {
+            const query = e.target.value.toLowerCase();
+            const filteredHelpers = allHelpers.filter(helper =>
+                helper.workType && helper.workType.toLowerCase().includes(query)
+            );
+            displayHelpers(filteredHelpers);
+        });
+
+        fetchHelpers();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Registration Form</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+    <style>
+        /* ... (Your existing CSS) ... */
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #fafafc, #61dbdd, #edefef);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+            transition: background 0.5s ease;
+        }
+        
+        .form-container {
+            background: rgba(202, 247, 245, 0.95);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 450px;
+            max-width: 90%;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .form-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+        }
+        
+        .form-container h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #06f412;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            transition: color 0.3s ease;
+        }
+        
+        input,
+        select,
+        .file-input-wrapper {
+            width: calc(100% - 20px);
+            padding: 12px 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        input:focus,
+        select:focus,
+        .file-input-wrapper:focus-within {
+            outline: none;
+            border-color: #42a5f5;
+            box-shadow: 0 2px 5px rgba(66, 165, 245, 0.3);
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .file-input-wrapper .file-label {
+            flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(to right, #9dce95, #3f7a4c);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(238, 17, 17, 0.938);
+        }
+        
+        select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%2342a5f5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px top 50%;
+            background-size: 16px;
+        }
+        
+        select::-ms-expand {
+            display: none;
+        }
+        
+        @media (max-width: 500px) {
+            .form-container {
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+        <h2>Job Registration Form</h2>
+        <form id="jobForm" enctype="multipart/form-data">
+
+            <label for="company">Company Name:</label>
+            <input type="text" id="company" name="company" required>
+            <label for="name">Full Name:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="phone">Phone Number:</label>
+            <input type="tel" id="phone" name="phone" required>
+
+            <label for="resume">Upload Resume:</label>
+            <div class="file-input-wrapper">
+                <span class="file-label">Choose File</span>
+                <input type="file" id="resume" name="resume" required onchange="this.previousElementSibling.textContent = this.files[0].name">
+            </div>
+
+            <button type="submit">Register</button>
+        </form>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEHEkLvkvbyPx1xuwMwiDpzqL41ZEmU74",
+            authDomain: "application-5e6fe.firebaseapp.com",
+            databaseURL: "https://application-5e6fe-default-rtdb.firebaseio.com/", // Corrected database URL
+            projectId: "application-5e6fe",
+            storageBucket: "application-5e6fe.firebasestorage.app",
+            messagingSenderId: "925485219022",
+            appId: "1:925485219022:web:f9b47ed092376bafb6a49f",
+            measurementId: "G-NQZKHVTE1K"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        document.getElementById('jobForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const company = document.getElementById('company').value;
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const resume = document.getElementById('resume').files[0];
+
+            const resumeFileName = resume.name;
+
+            database.ref('jobApplications/').push({
+                company: company,
+                name: name,
+                email: email,
+                phone: phone,
+                resumeFileName: resumeFileName,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                alert('Registration failed. Please try again.');
+            });
+        });
+    </script>
+</body>
+
+</html>

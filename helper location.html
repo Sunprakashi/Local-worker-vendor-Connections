@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Helper Dashboard with Map</title>
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+      color: #333;
+    }
+
+    .dashboard {
+      padding: 20px;
+      text-align: center;
+    }
+
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+
+    .jobs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .job-card {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .apply-btn {
+      background-color: #007bff;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    .apply-btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+  <!-- Google Maps -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBB9MwCAOonuAW0MV-CxJGti2Qf99QZ6pE"></script>
+</head>
+
+<body>
+
+  <div class="dashboard">
+    <h2>Nearby Plumbers</h2>
+    <div id="map"></div>
+    <div class="jobs" id="helperListings"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3Pozh1DiDghqzpx2yTAYoXkLNHuWMHps",
+      authDomain: "jobposter-11ecd.firebaseapp.com",
+      projectId: "jobposter-11ecd",
+      storageBucket: "jobposter-11ecd.appspot.com",
+      messagingSenderId: "1054867723446",
+      appId: "1:1054867723446:web:d1902de9aeb7b146fc4217",
+      measurementId: "G-LK3WR7EKYB"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let map, userLat, userLng;
+
+    // Initialize Map
+    function initMap() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          userLat = position.coords.latitude;
+          userLng = position.coords.longitude;
+
+          map = new google.maps.Map(document.getElementById("map"), {
+            center: { lat: userLat, lng: userLng },
+            zoom: 14
+          });
+
+          // Add user marker
+          new google.maps.Marker({
+            position: { lat: userLat, lng: userLng },
+            map: map,
+            title: "You are here",
+            icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+          });
+
+          fetchHelpers();
+        });
+      } else {
+        alert("Geolocation not supported by your browser.");
+      }
+    }
+
+    function fetchHelpers() {
+      db.collection("helpers").get().then(snapshot => {
+        const helpers = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.workType && data.workType.toLowerCase() === 'plumber') {
+            helpers.push(data);
+          }
+        });
+        displayHelpers(helpers);
+      });
+    }
+
+    function displayHelpers(helperList) {
+      const helperListings = document.getElementById('helperListings');
+      helperListings.innerHTML = '';
+
+      helperList.forEach(helper => {
+        const contact = helper.contact;
+        if (!contact) return;
+
+        db.collection("liveLocations").doc(contact).get().then(doc => {
+          if (doc.exists) {
+            const { lat, lng } = doc.data();
+
+            // Add marker on map
+            new google.maps.Marker({
+              position: { lat, lng },
+              map: map,
+              title: helper.name || "Helper"
+            });
+
+            // Show card
+            const card = document.createElement('div');
+            card.classList.add('job-card');
+            card.innerHTML = `
+              <h4>${helper.name || 'Unnamed'}</h4>
+              <p><strong>Contact:</strong> ${helper.contact || 'N/A'}</p>
+              <p><strong>Email:</strong> ${helper.email || 'N/A'}</p>
+              <p><strong>Experience:</strong> ${helper.experience || '0'} years</p>
+              <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank">
+                <button class="apply-btn" style="background-color: green;">Live Location</button>
+              </a>
+            `;
+            helperListings.appendChild(card);
+          }
+        });
+      });
+    }
+
+    // Load map
+    window.onload = initMap;
+  </script>
+
+</body>
+</html>

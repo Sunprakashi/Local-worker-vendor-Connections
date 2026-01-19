@@ -1,0 +1,152 @@
+/* General Styles */
+
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #0d9fd4, #0b33b7, #4d0af7);
+    color: #0a0202;
+    line-height: 1.6;
+    transition: background 0.3s ease;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 50px;
+    background-color: #c1c1c1;
+    background: linear-gradient(135deg, #05a6d7, #140ad8, #4f05c7);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #191a1c;
+    display: flex;
+    align-items: center;
+}
+
+.postjob-btn {
+    margin-left: auto;
+    background-color: #e34fde;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.postjob-btn:hover {
+    background-color: #9fcc37;
+}
+
+.myjob-btn {
+    margin-left: auto;
+    background-color: #ff4000;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.myjob-btn:hover {
+    background-color: #f77016;
+}
+
+.helper-btn {
+    margin-left: auto;
+    background-color: #00ff1a;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.helper-btn:hover {
+    background-color: #50ddf3;
+}
+
+.viewhelper-btn {
+    margin-left: auto;
+    background-color: #ff0022;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.viewhelper-btn:hover {
+    background-color: #c76a5e;
+}
+
+.womenjob-btn {
+    margin-left: auto;
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.womenjob-btn:hover {
+    background-color: #0056b3;
+}
+
+.dashboard {
+    padding: 40px;
+    text-align: center;
+}
+
+.no-background {
+    background: none !important;
+}
+
+.sidebar {
+    height: 80%;
+    width: 0;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #979593ef;
+    overflow-x: hidden;
+    transition: 0.5s;
+    padding-top: 60px;
+}
+
+.sidebar a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #f0ebeb;
+    display: block;
+    transition: 0.3s;
+}
+
+.sidebar a:hover {
+    color: #f1f1f1;
+}
+
+.sidebar .closebtn {
+    position: absolute;
+    top: 0;
+    right: 25px;
+    font-size: 36px;
+    margin-left: 50px;
+}
+
+#main {
+    transition: margin-left .5s;
+    padding: 16px;
+}

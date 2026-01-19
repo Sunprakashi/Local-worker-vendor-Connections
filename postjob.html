@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Portal</title>
+    <link rel="stylesheet" href="postjob.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Post a Job</h1>
+        <form id="jobForm">
+            <input type="hidden" id="jobId">
+            <label>Job Title:</label>
+            <input type="text" id="jobTitle" required>
+            <label>Company:</label>
+            <input type="text" id="companyName" required>
+            <label>Location:</label>
+            <input type="text" id="location" required>
+            <label>Email:</label>
+            <input type="text" id="Email" required>
+            <label>Contact:</label>
+            <input type="text" id="Contact" required>
+            <label>Area Type:</label>
+            <select id="areaType" required>
+                <option value="Urban">Urban</option>
+                <option value="Rural">Rural</option>
+            </select>
+            <label>Job Type:</label>
+            <select id="jobType" required>
+                <option value="Full-Time">Full-Time</option>
+                <option value="Part-Time">Part-Time</option>
+                <option value="Freelance">Freelance</option>
+                <option value="Remote">Remote</option>
+            </select>
+            <label>Salary (Optional):</label>
+            <input type="text" id="salary">
+            <label>Job Description:</label>
+            <textarea id="description" required></textarea>
+
+            <button type="submit">Save Job</button>
+        </form>
+    </div>
+
+    <script>
+        // Initialize Firebase (Replace with your Firebase config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Pozh1DiDghqzpx2yTAYoXkLNHuWMHps",
+            authDomain: "jobposter-11ecd.firebaseapp.com",
+            projectId: "jobposter-11ecd",
+            storageBucket: "jobposter-11ecd.firebasestorage.app",
+            messagingSenderId: "1054867723446",
+            appId: "1:1054867723446:web:d1902de9aeb7b146fc4217",
+            measurementId: "G-LK3WR7EKYB"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const jobForm = document.getElementById('jobForm');
+
+        jobForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const jobId = document.getElementById('jobId').value;
+            const jobTitle = document.getElementById('jobTitle').value;
+            const companyName = document.getElementById('companyName').value;
+            const location = document.getElementById('location').value;
+            const Email = document.getElementById('Email').value;
+            const Contact = document.getElementById('Contact').value;
+            const areaType = document.getElementById('areaType').value;
+            const jobType = document.getElementById('jobType').value;
+            const salary = document.getElementById('salary').value;
+            const description = document.getElementById('description').value;
+            // Added areaType
+
+            const jobData = {
+                jobTitle: jobTitle,
+                companyName: companyName,
+                location: location,
+                Email: Email,
+                Contact: Contact,
+                areaType: areaType,
+                jobType: jobType,
+                salary: salary,
+                description: description,
+                // Added areaType
+            };
+
+            if (jobId) {
+                // Update existing job
+                db.collection('jobs').doc(jobId).update(jobData)
+                    .then(() => {
+                        alert('Job updated successfully!');
+                        jobForm.reset();
+                        document.getElementById('jobId').value = '';
+                    })
+                    .catch((error) => {
+                        console.error('Error updating job:', error);
+                        alert('Failed to update job.');
+                    });
+            } else {
+                // Add new job
+                db.collection('jobs').add(jobData)
+                    .then(() => {
+                        alert('Job posted successfully!');
+                        jobForm.reset();
+                    })
+                    .catch((error) => {
+                        console.error('Error posting job:', error);
+                        alert('Failed to post job.');
+                    });
+            }
+        });
+    </script>
+</body>
+
+</html>
